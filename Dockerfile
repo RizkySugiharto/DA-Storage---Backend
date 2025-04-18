@@ -1,0 +1,21 @@
+FROM node:22
+
+WORKDIR /backend
+
+COPY . /backend
+
+RUN npm install
+
+EXPOSE 8080
+
+ENV API_VERSION=1
+ENV PORT=3000
+ENV MYSQL_HOST=''
+ENV MYSQL_PORT=3306
+ENV MYSQL_USER=''
+ENV MYSQL_PASSWORD=''
+ENV MYSQL_DATABASE=''
+ENV JWT_SECRET_KEY='jwt-secret-key'
+ENV JWT_HEADER_NAME='Token'
+
+CMD [ "npm", "start" ]
