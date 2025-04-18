@@ -1,10 +1,10 @@
 FROM node:22
 
-WORKDIR /backend
+WORKDIR /app
 
-COPY . /backend
+COPY . .
 
-RUN npm install
+RUN npm ci
 
 EXPOSE 8080
 
