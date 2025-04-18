@@ -39,7 +39,7 @@ module.exports = function (fastify, opts, done) {
             `
         ))[0][0]
 
-        result.total_sales = parseFloat(result.total_sales)
+        result.total_sales = parseFloat(result.total_sales ?? 0)
 
         return reply.code(200).send(result)
     })
