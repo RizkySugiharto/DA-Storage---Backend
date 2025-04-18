@@ -1,0 +1,5 @@
+avatars/
+logs/
+node_modules/
+.vscode/
+.env.local
