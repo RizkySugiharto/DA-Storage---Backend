@@ -1,4 +1,4 @@
-const { Unauthorized } = require('http-errors')
+const { Unauthorized, Forbidden } = require('http-errors')
 const utils = require('./utils')
 
 async function loadPlugins(fastify) {
