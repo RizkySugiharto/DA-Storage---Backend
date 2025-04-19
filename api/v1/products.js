@@ -139,7 +139,7 @@ module.exports = function (fastify, opts, done) {
         preHandler: [fastify.authenticate]
     }, async (req, reply) => {
         const result = (await fastify.mysql.query(
-            'SELECT * FROM products WHERE id = ?',
+            'SELECT products.id AS id, category_id, categories.name AS category_name, products.name AS name, price, stock, updated_at FROM products JOIN categories ON products.category_id = categories.id WHERE products.id = ?',
             [req.params.id]
         ))[0]
 
@@ -149,6 +149,12 @@ module.exports = function (fastify, opts, done) {
 
         const product = result[0]
         product.price = parseFloat(product.price)
+        product.category = {
+            id: product.category_id,
+            name: product.category_name,
+        }
+        delete product.category_id;
+        delete product.category_name;
 
         return reply.code(HttpStatusCode.Ok).send(product)
     })
