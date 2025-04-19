@@ -186,6 +186,14 @@ module.exports = function (fastify, opts, done) {
 
         conn.release()
 
+        product.price = parseFloat(product.price)
+        product.category = {
+            id: product.category_id,
+            name: product.category_name,
+        }
+        delete product.category_id;
+        delete product.category_name;
+
         return reply.code(HttpStatusCode.Created).send(product)
     })
 
@@ -212,6 +220,14 @@ module.exports = function (fastify, opts, done) {
             'SELECT * FROM products WHERE id = ?',
             [req.params.id]
         ))[0][0]
+
+        product.price = parseFloat(product.price)
+        product.category = {
+            id: product.category_id,
+            name: product.category_name,
+        }
+        delete product.category_id;
+        delete product.category_name;
 
         return reply.code(HttpStatusCode.Ok).send(product)
     })
