@@ -15,7 +15,7 @@ async function checkCategoryExists(conn, category_id) {
 
 module.exports = function (fastify, opts, done) {
     fastify.get('/', {
-        preHandler: [fastify.authenticate, fastify.onlyAdministrator]
+        preHandler: [fastify.authenticate]
     }, async (req, reply) => {
         let products = []
         const searchQuery = req.query.search ? `%${req.query.search}%` : null
@@ -133,7 +133,7 @@ module.exports = function (fastify, opts, done) {
     })
 
     fastify.get('/:id', {
-        preHandler: [fastify.authenticate, fastify.onlyAdministrator]
+        preHandler: [fastify.authenticate]
     }, async (req, reply) => {
         const result = (await fastify.mysql.query(
             'SELECT * FROM products WHERE id = ?',

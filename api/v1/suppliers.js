@@ -4,7 +4,7 @@ const { NotFound } = require('http-errors')
 
 module.exports = function (fastify, opts, done) {
     fastify.get('/', {
-        preHandler: [fastify.authenticate, fastify.onlyAdministrator]
+        preHandler: [fastify.authenticate]
     }, async (req, reply) => {
         const searchQuery = req.query.search ? `%${req.query.search}%` : null
         let suppliers = []
@@ -33,7 +33,7 @@ module.exports = function (fastify, opts, done) {
     })
 
     fastify.get('/:id', {
-        preHandler: [fastify.authenticate, fastify.onlyAdministrator]
+        preHandler: [fastify.authenticate]
     }, async (req, reply) => {
         const result = (await fastify.mysql.query(
             'SELECT * FROM suppliers WHERE id = ?',

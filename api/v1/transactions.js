@@ -4,7 +4,7 @@ const { NotFound, UnprocessableEntity, BadRequest } = require('http-errors')
 
 module.exports = function (fastify, opts, done) {
     fastify.get('/', {
-        preHandler: [fastify.authenticate, fastify.onlyAdministrator]
+        preHandler: [fastify.authenticate]
     }, async (req, reply) => {
         const filterDateRange = [1, 3, 6, 12, 24, 36].includes(parseInt(req.query.filter_date_range)) ? req.query.filter_date_range : 3
         const filterType = ['purchase', 'sale', 'return'].includes(req.query.filter_type) ? req.query.filter_type : 'all'
@@ -41,7 +41,7 @@ module.exports = function (fastify, opts, done) {
     })
 
     fastify.get('/:id', {
-        preHandler: [fastify.authenticate, fastify.onlyAdministrator]
+        preHandler: [fastify.authenticate]
     }, async (req, reply) => {
         let result, customer, supplier
 

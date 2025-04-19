@@ -31,7 +31,7 @@ function getWhereExpressionByDateRange(value) {
 
 module.exports = function (fastify, opts, done) {
     fastify.get('/today-sales', {
-        preHandler: [fastify.authenticate, fastify.onlyAdministrator]
+        preHandler: [fastify.authenticate]
     }, async (req, reply) => {
         let result = (await fastify.mysql.query(
             `SELECT SUM(total_cost) AS total_sales, COUNT(*) AS total_transactions
@@ -45,7 +45,7 @@ module.exports = function (fastify, opts, done) {
     })
 
     fastify.get('/summary', {
-        preHandler: [fastify.authenticate, fastify.onlyAdministrator]
+        preHandler: [fastify.authenticate]
     }, async (req, reply) => {
         const dateRange = getValidDateRange(req.query.date_range)
         const whereExpression = getWhereExpressionByDateRange(dateRange)
@@ -72,7 +72,7 @@ module.exports = function (fastify, opts, done) {
     })
 
     fastify.get('/stock-levels', {
-        preHandler: [fastify.authenticate, fastify.onlyAdministrator]
+        preHandler: [fastify.authenticate]
     }, async (req, reply) => {
         let result = (await fastify.mysql.query(
             `SELECT (
@@ -102,7 +102,7 @@ module.exports = function (fastify, opts, done) {
     })
 
     fastify.get('/total-sales', {
-        preHandler: [fastify.authenticate, fastify.onlyAdministrator]
+        preHandler: [fastify.authenticate]
     }, async (req, reply) => {
         const dateRange = getValidDateRange(req.query.date_range)
         const result = (await fastify.mysql.query(
@@ -120,7 +120,7 @@ module.exports = function (fastify, opts, done) {
     })
 
     fastify.get('/transactions', {
-        preHandler: [fastify.authenticate, fastify.onlyAdministrator]
+        preHandler: [fastify.authenticate]
     }, async (req, reply) => {
         const dateRange = getValidDateRange(req.query.date_range)
         const whereExpression = getWhereExpressionByDateRange(dateRange)
@@ -153,7 +153,7 @@ module.exports = function (fastify, opts, done) {
     })
 
     fastify.get('/most-used-product-stock', {
-        preHandler: [fastify.authenticate, fastify.onlyAdministrator]
+        preHandler: [fastify.authenticate]
     }, async (req, reply) => {
         const dateRange = getValidDateRange(req.query.date_range)
         const whereExpression = getWhereExpressionByDateRange(dateRange)
