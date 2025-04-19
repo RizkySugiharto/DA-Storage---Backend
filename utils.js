@@ -91,6 +91,9 @@ function combineAvatarUrlWithHost(req, filename) {
 }
 
 function convertFilterTextToArray(filter) {
+    if (!filter) {
+        return [];
+    }
     return filter.split(',').map(item => item.trim());
 }
 
