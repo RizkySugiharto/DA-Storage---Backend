@@ -24,13 +24,14 @@ module.exports = function (fastify, opts, done) {
         let crrntFilterArr = []
         let isFilterFirst = true
         const getFilterOperator = () => isFilterFirst ? '' : 'OR'
-        const isCrrntFilterActive = () => !(crrntFilterArr[0] == '' && crrntFilterArr.length == 1)
+        const isCrrntFilterActive = () => crrntFilterArr.length > 0;
 
         if (searchQuery) {
             whereExpression += ` AND products.id LIKE ? OR products.name LIKE ? OR categories.name LIKE ?`
         }
         
         crrntFilterArr = utils.convertFilterTextToArray(req.query.filter_stock_level)
+        console.log(isCrrntFilterActive())
         if (isCrrntFilterActive()) {
             crrntFilterExpr = ' AND ('
             isFilterFirst = true
@@ -97,6 +98,8 @@ module.exports = function (fastify, opts, done) {
             crrntFilterArr = []
             whereExpression += crrntFilterExpr
         }
+
+        console.log(whereExpression);
 
         if (
             ['id', 'name', 'price', 'stock', 'updated_at'].includes(req.query.sort_by)
