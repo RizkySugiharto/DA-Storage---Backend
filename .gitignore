@@ -2,3 +2,5 @@ logs/
 node_modules/
 .vscode/
 .env.local
+avatars/*
+!avatars/default.*

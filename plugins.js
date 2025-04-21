@@ -50,10 +50,16 @@ async function loadPlugins(fastify) {
         if (!req.isMultipart()) {
             return
         }
-        
+
         const newBody = Object.fromEntries(
-            Object.keys(req.body).map((key) => [key, req.body[key].value])
+            Object.keys(req.body).map((key) => {
+                if (req.body[key].type == 'field') {
+                    return [key, req.body[key].value]
+                }
+                return [key, req.body[key]]
+            })
         )
+        
         req.body = newBody
     })
 
