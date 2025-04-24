@@ -9,6 +9,7 @@ module.exports = function (fastify, opts, done) {
         const conn = await fastify.mysql.getConnection()
         const searchQuery = req.query.search ? `%${req.query.search}%` : null
         let searchExpression = ''
+        let sortExpression = 'ORDER BY name ASC'
         let sqlQueryParams = []
         let accounts = {}
 
@@ -16,17 +17,24 @@ module.exports = function (fastify, opts, done) {
             searchExpression += `AND name LIKE ?`
             sqlQueryParams.push(searchQuery)
         }
+
+        if (
+            ['id', 'name', 'email', 'role'].includes(req.query.sort_by)
+            && ['asc', 'desc'].includes(req.query.sort_order)
+        ) {
+            sortExpression = `ORDER BY ${req.query.sort_by} ${req.query.sort_order}`;
+        }
         
         try {
             if (req.query.role && utils.isRoleValid(req.query.role)) {
                 sqlQueryParams = [req.query.role, ...sqlQueryParams]
                 accounts = (await conn.query(
-                    `SELECT id, avatar_url, name, email FROM accounts WHERE role = ? ${searchExpression}`,
+                    `SELECT id, avatar_url, name, email, role FROM accounts WHERE role = ? ${searchExpression} ${sortExpression}`,
                     sqlQueryParams
                 ))[0]
             } else {
                 accounts = (await conn.query(
-                    `SELECT id, avatar_url, name, email FROM accounts WHERE 1=1 ${searchExpression} ORDER BY name`,
+                    `SELECT id, avatar_url, name, email, role FROM accounts WHERE 1=1 ${searchExpression} ${sortExpression}`,
                     sqlQueryParams
                 ))[0]
             }
@@ -47,7 +55,7 @@ module.exports = function (fastify, opts, done) {
         preHandler: [fastify.authenticate, fastify.onlyAdministrator]
     }, async (req, reply) => {
         const result = (await fastify.mysql.query(
-            'SELECT avatar_url, name, email, role FROM accounts WHERE id = ?',
+            'SELECT id, avatar_url, name, email, role FROM accounts WHERE id = ?',
             [req.params.accountId]
         ))[0]
 
@@ -132,7 +140,7 @@ module.exports = function (fastify, opts, done) {
     }, async (req, reply) => {
         await fastify.mysql.query(
             'DELETE FROM accounts WHERE id = ?',
-            [req.params.accoundId]
+            [req.params.accountId]
         )
 
         return reply.code(HttpStatusCode.ResetContent).send()
