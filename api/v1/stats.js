@@ -22,11 +22,30 @@ function getGroupByExpressionByDateRange(value) {
 
 function getWhereExpressionByDateRange(value) {
     return {
-        'last week': 'WEEK(created_at) = WEEK(NOW()) - 0',
-        'last month': 'MONTH(created_at) = MONTH(NOW()) - 1',
-        'last year': 'YEAR(created_at) = YEAR(NOW()) - 1',
-        'last 3 years': 'WEEK(created_at) = WEEK(NOW()) - 3',
+        'last week': 'created_at >= DATE_SUB(CURDATE(), INTERVAL 1 WEEK)',
+        'last month': 'created_at >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)',
+        'last year': 'created_at >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)',
+        'last 3 years': 'created_at >= DATE_SUB(CURDATE(), INTERVAL 3 YEAR)',
     }[value] ?? 'BY DAY(created_at)'
+}
+
+function convertToValidData(dateRange, data, noneData) {
+    const num = {
+        'last week': 7,
+        'last month': 31,
+        'last year': 12,
+        'last 3 years': 36,
+    }[dateRange]
+    const newData = []
+
+    for (let i = 0; i < num; i++) {
+        newData.push({
+            index: i+1,
+            ...(data[i] ?? noneData)
+        })
+    }
+
+    return newData
 }
 
 module.exports = function (fastify, opts, done) {
@@ -111,12 +130,13 @@ module.exports = function (fastify, opts, done) {
             GROUP BY ${getGroupByExpressionByDateRange(dateRange)}`
         ))[0]
             
-        result.forEach((item, index) => {
-            item.index = index
-            item.sales = parseFloat(item.sales) || 0
+        result.forEach((item) => {
+            item.sales = parseFloat(item.sales) ?? 0
         })
         
-        return reply.code(HttpStatusCode.Ok).send(result)
+        return reply.code(HttpStatusCode.Ok).send(convertToValidData(dateRange, result, {
+            sales: 0
+        }))
     })
 
     fastify.get('/transactions', {
@@ -142,14 +162,17 @@ module.exports = function (fastify, opts, done) {
         ))[0]
 
         result.forEach((item) => {
-            item.index = index
             item.purchase = item.purchase ?? 0
             item.sale = item.sale ?? 0
             item.return = item._return ?? 0
             delete item._return
         })
         
-        return reply.code(HttpStatusCode.Ok).send(result)
+        return reply.code(HttpStatusCode.Ok).send(convertToValidData(dateRange, result, {
+            purchase: 0,
+            sale: 0,
+            return: 0,
+        }))
     })
 
     fastify.get('/most-used-product-stock', {
@@ -160,27 +183,29 @@ module.exports = function (fastify, opts, done) {
         const groupByExpression = getGroupByExpressionByDateRange(dateRange)
         let result
 
-        result = (await fastify.mysql.query(
-            `SELECT COUNT(*) AS _usage, product_id FROM transaction_items
+        const mostUsageTransactionItems = (await fastify.mysql.query(
+            `SELECT COUNT(*) AS _usage, product_id, unit_name FROM transaction_items
                 WHERE ${whereExpression}
                 ORDER BY _usage DESC
             `
-        ))[0]
-        const mostUsageProductId = result[0].product_id
+        ))[0][0]
 
-        result = (await fastify.mysql.query(
+        const stockLogs = (await fastify.mysql.query(
             `SELECT init_stock AS stock FROM stock_logs
                 WHERE ${whereExpression} AND product_id = ?
                 GROUP BY ${groupByExpression}
             `,
-            [mostUsageProductId]
+            [mostUsageTransactionItems.product_id]
         ))[0]
 
-        result.forEach((item, index) => {
-            item.index = index
+        return reply.code(HttpStatusCode.Ok).send({
+            product: {
+                id: mostUsageTransactionItems.product_id ?? 0,
+                name: mostUsageTransactionItems.unit_name ?? '',
+                total_transactions: mostUsageTransactionItems._usage,
+            },
+            stock_logs: convertToValidData(dateRange, stockLogs, {stock: 0})
         })
-        
-        return reply.code(HttpStatusCode.Ok).send(result)
     })
 
     done()
