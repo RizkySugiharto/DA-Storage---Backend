@@ -79,20 +79,20 @@ module.exports = function (fastify, opts, done) {
             'password'
         )
 
-        const avatarFilename = req.body.avatar_file ? await utils.saveAvatarFile(req.body.avatar_file) : null
+        const avatarPublicId = req.body.avatar_file ? await utils.saveAvatarFile(req.body.avatar_file) : null
         const conn = await fastify.mysql.getConnection()
         
         await conn.query(
             `INSERT INTO accounts (avatar_url, name, email, role, password)
             VALUES (?, ?, ?, ?, ?)`,
-            [avatarFilename, req.body.name, req.body.email, req.body.role, utils.hashPassword(req.body.password)]
+            [avatarPublicId, req.body.name, req.body.email, req.body.role, utils.hashPassword(req.body.password)]
         )
         const account = (await conn.query(
             'SELECT id, avatar_url, name, email, role FROM accounts WHERE id = LAST_INSERT_ID()'
         ))[0][0]
 
         conn.release()
-        account.avatar_url = utils.combineAvatarUrlWithHost(req, avatarFilename)
+        account.avatar_url = utils.combineAvatarUrlWithHost(req, avatarPublicId)
 
         return reply.code(HttpStatusCode.Created).send(account)
     })
@@ -119,10 +119,10 @@ module.exports = function (fastify, opts, done) {
         }
         
         if (req.body.avatar_file?.filename) {
-            const avatarFilename = await utils.saveAvatarFile(req.body.avatar_file)
+            const avatarPublicId = await utils.saveAvatarFile(req.body.avatar_file)
             await fastify.mysql.query(
                 'UPDATE accounts SET avatar_url = ? WHERE id = ?',
-                [avatarFilename, req.params.accountId]
+                [avatarPublicId, req.params.accountId]
             )
         }
 

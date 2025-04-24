@@ -1,10 +1,11 @@
 const { BadRequest, InternalServerError } = require('http-errors')
-const { isDevMode } = require('./utils')
+const utils = require('./utils')
 const config = require('./config')
 const logger = require('./logger')
 const plugins = require('./plugins')
 const fs = require('fs')
 const schedule = require('node-schedule')
+const cloudinary = require('cloudinary').v2;
 
 async function main() {
     // Load environtment configuration
@@ -17,6 +18,15 @@ async function main() {
 
     // Register all plugins
     await plugins.loadPlugins(fastify)
+
+    // Setup Cloudinary
+    cloudinary.config({
+        secure: true,
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET
+    })
+    fastify.log.info('Setup cloudinary has been finished')
     
     // Register all routes
     const API_VERSION = `v${process.env.API_VERSION}`
@@ -24,13 +34,19 @@ async function main() {
         const routeName = file.replace('.js', '')
         fastify.register(require(`./api/${API_VERSION}/${routeName}`), { prefix: `/${API_VERSION}/${routeName}` })
     }
-    fastify.get('/avatars/:filename', async (req, reply) => {
-        const { filename } = req.params
-        const filePath = `${__dirname}/avatars/${filename}`
+    fastify.get('/avatars/:publicId', async (req, reply) => {
+        if (req.params.publicId.includes('default')) {   
+            return reply.send(fs.createReadStream(`${__dirname}/avatars/default.png`))
+        }
         
-        if (fs.existsSync(filePath)) {
-            return reply.send(fs.createReadStream(filePath))
-        } else {
+        try {
+            const result = await cloudinary.api.resource(req.params.publicId)
+            const buffer = await utils.getBufferFromUrl(result.secure_url)
+            
+            reply.header('Content-Type', `${result.resource_type}/${result.format}`)
+            return reply.send(buffer)
+        } catch (error) {
+            fastify.log.error(error)
             return reply.send(fs.createReadStream(`${__dirname}/avatars/default.png`))
         }
     })
@@ -41,7 +57,7 @@ async function main() {
     // Setup Error Handler
     fastify.setErrorHandler((error, request, reply) => {
         const statusCode = error.statusCode || 500
-        return isDevMode() ?
+        return utils.isDevMode() ?
             reply.code(statusCode).send(error) :
             reply.code(statusCode).send({
                 400: BadRequest('Something went wrong with the request'),

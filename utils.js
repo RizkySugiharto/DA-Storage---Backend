@@ -1,7 +1,10 @@
 const fs = require('fs')
 const path = require('path')
 const crypto = require('crypto')
-const { UnprocessableEntity, BadRequest } = require('http-errors')
+const { UnprocessableEntity, BadRequest } = require('http-errors');
+const { default: fastify } = require('fastify');
+const cloudinary = require('cloudinary').v2;
+const https = require('https');
 
 function isDevMode() {
     return process.env.NODE_ENV === 'development'
@@ -41,16 +44,18 @@ function generateJwtToken(fastify, account) {
 }
 
 async function saveAvatarFile(field) {
-    const filenameSplitted = field.filename.split('.')
-    const avatarFilename = `${Date.now()}.${filenameSplitted[filenameSplitted.length - 1]}`;
-    const avatarPath = path.join(__dirname, 'avatars', avatarFilename)
+    const fileBuffer = await field.toBuffer()
+    const uploadResult = await new Promise((resolve) => {
+        cloudinary.uploader.upload_stream((error, uploadResult) => {
+            if (error) {
+                fastify.log.error(error)
+            }
 
-    if (!fs.existsSync(path.join(__dirname, 'avatars'))) {
-        fs.mkdirSync(path.join(__dirname, 'avatars'))
-    }
-    fs.writeFile(avatarPath, await field.toBuffer(), function(){});
+            return resolve(uploadResult)
+        }).end(fileBuffer)
+    })
 
-    return avatarFilename
+    return uploadResult.public_id
 }
 
 function checkReqBodyAvailability(req, ...keys) {
@@ -85,9 +90,9 @@ function checkReqBodyAvailability(req, ...keys) {
     return true
 }
 
-function combineAvatarUrlWithHost(req, filename) {
+function combineAvatarUrlWithHost(req, publicId) {
     const host = `${req.protocol}://${req.hostname}`;
-    return `${host}/avatars/${filename ?? 'default.png'}`;
+    return `${host}/avatars/${publicId ?? 'default.png'}`;
 }
 
 function convertFilterTextToArray(filter) {
@@ -96,6 +101,21 @@ function convertFilterTextToArray(filter) {
     }
     return filter.split(',').map(item => item.trim());
 }
+
+async function getBufferFromUrl(url) {
+    return new Promise((resolve) => {
+      https.get(url, (response) => {
+        const body = []
+        response
+          .on('data', (chunk) => {
+            body.push(chunk)
+          })
+          .on('end', () => {
+            resolve(Buffer.concat(body))
+          })
+      })
+    })
+  }
 
 module.exports = {
     isDevMode,
@@ -107,5 +127,6 @@ module.exports = {
     checkReqBodyAvailability,
     saveAvatarFile,
     combineAvatarUrlWithHost,
-    convertFilterTextToArray
+    convertFilterTextToArray,
+    getBufferFromUrl
 }
