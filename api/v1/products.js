@@ -31,7 +31,6 @@ module.exports = function (fastify, opts, done) {
         }
         
         crrntFilterArr = utils.convertFilterTextToArray(req.query.filter_stock_level)
-        console.log(isCrrntFilterActive())
         if (isCrrntFilterActive()) {
             crrntFilterExpr = ' AND ('
             isFilterFirst = true
@@ -98,8 +97,6 @@ module.exports = function (fastify, opts, done) {
             crrntFilterArr = []
             whereExpression += crrntFilterExpr
         }
-
-        console.log(whereExpression);
 
         if (
             ['id', 'name', 'price', 'stock', 'updated_at'].includes(req.query.sort_by)

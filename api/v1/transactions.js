@@ -174,7 +174,7 @@ module.exports = function (fastify, opts, done) {
 
         await conn.query(
             `INSERT INTO transactions (account_id, supplier_id, customer_id, type, total_cost, created_at)
-            VALUES (?, ?, ?, ?, ?)`,
+            VALUES (?, ?, ?, ?, ?, ?)`,
             [req.jwtDecoded.id, req.body.supplier_id, req.body.customer_id, req.body.type, req.body.total_cost, dateNow]
         )
 
@@ -183,12 +183,12 @@ module.exports = function (fastify, opts, done) {
         for (const item of req.body.items) {
             await conn.query(
                 `INSERT INTO transaction_items (transaction_id, product_id, unit_name, unit_price, quantity, created_at)
-                VALUES (?, ?, ?, ?, ?)`,
+                VALUES (?, ?, ?, ?, ?, ?)`,
                 [transaction_id, item.product_id, item.unit_name, item.unit_price, item.quantity, dateNow]
             )
             await conn.query(
                 `INSERT INTO stock_logs (transaction_id, product_id, init_stock, change_type, quantity, created_at)
-                VALUES (?, ?, ?, ?, ?)`,
+                VALUES (?, ?, ?, ?, ?, ?)`,
                 [transaction_id, item.product_id, item.stock, req.body.stock_change_type, item.quantity, dateNow]
             )
 
