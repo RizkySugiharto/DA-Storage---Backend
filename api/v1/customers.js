@@ -54,8 +54,6 @@ module.exports = function (fastify, opts, done) {
     }, async (req, reply) => {
         utils.checkReqBodyAvailability(req,
             'name',
-            'email',
-            'phone_number'
         )
 
         const conn = await fastify.mysql.getConnection()
@@ -79,13 +77,11 @@ module.exports = function (fastify, opts, done) {
     }, async (req, reply) => {
         utils.checkReqBodyAvailability(req,
             'name',
-            'email',
-            'phone_number'
         )
 
         await fastify.mysql.query(
             'UPDATE customers SET name = ?, email = ?, phone_number = ? WHERE id = ?',
-            [req.body.name, req.body.email, req.body.phone_number, req.params.id]
+            [req.body.name, req.body.email ?? '', req.body.phone_number ?? '', req.params.id]
         )
         
         const customer = (await fastify.mysql.query(
