@@ -54,7 +54,7 @@ module.exports = function (fastify, opts, done) {
     }, async (req, reply) => {
         let result = (await fastify.mysql.query(
             `SELECT SUM(total_cost) AS total_sales, COUNT(*) AS total_transactions
-            FROM transactions WHERE DAY(created_at) = DAY(NOW())
+            FROM transactions WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)
             `
         ))[0][0]
 
