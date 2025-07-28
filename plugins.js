@@ -47,7 +47,7 @@ async function loadPlugins(fastify) {
             firebaseAdmin.initializeApp()
         },
         notifyLowStock: (productName) => {
-            firebaseAdmin.messaging().sendEachForMulticast({
+            firebaseAdmin.messaging().send({
                 notification: {
                     title: 'Stock Warning',
                     body: `Product [ ${productName} ] has stock less than 10`
@@ -56,7 +56,7 @@ async function loadPlugins(fastify) {
             })
         },
         notifyEmptyStock: (productName) => {
-            firebaseAdmin.messaging().sendEachForMulticast({
+            firebaseAdmin.messaging().send({
                 notification: {
                     title: 'Stock Warning',
                     body: `Product [ ${productName} ] has no stock`
