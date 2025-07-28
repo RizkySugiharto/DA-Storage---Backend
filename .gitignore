@@ -5,3 +5,5 @@ node_modules/
 avatars/*
 !avatars/default.*
 **/*firebase*.json
+temp/
+tmp/

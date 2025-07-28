@@ -11,11 +11,14 @@ function loadEnvConfig() {
 
 function loadFirebaseCredentials() {
     const base64 = process.env.FIREBASE_CREDENTIALS_BASE64
-    const filePath = "/tmp/firebase-key.json"
+    const filePath = "./tmp/firebase-key.json"
 
     if (base64 && !fs.existsSync(filePath)) {
         const json = Buffer.from(base64, "base64").toString("utf-8")
+
+        fs.mkdirSync('./tmp', { recursive: true })
         fs.writeFileSync(filePath, json)
+        
         process.env.GOOGLE_APPLICATION_CREDENTIALS = filePath
     }
 }
