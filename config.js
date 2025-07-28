@@ -17,9 +17,7 @@ function loadFirebaseCredentials() {
         const json = Buffer.from(base64, "base64").toString("utf-8")
 
         fs.mkdirSync('./tmp', { recursive: true })
-        fs.writeFileSync(filePath, json)
-        
-        process.env.GOOGLE_APPLICATION_CREDENTIALS = filePath
+        fs.writeFileSync(filePath, json)   
     }
 }
 

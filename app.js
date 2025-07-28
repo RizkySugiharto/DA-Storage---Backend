@@ -11,7 +11,7 @@ async function main() {
     // Load configurations
     config.loadEnvConfig()
     config.loadFirebaseCredentials()
-    
+
     // Initialize the app
     const fastify = require('fastify')({
         logger: logger
