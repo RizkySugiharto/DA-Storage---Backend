@@ -119,101 +119,107 @@ module.exports = function (fastify, opts, done) {
         const conn = await fastify.mysql.getConnection()
         const dateNow = new Date(Date.now())
 
-        switch (req.body.type) {
-            case 'purchase':
-                if (!req.body.supplier_id) {
-                    return BadRequest('supplier_id is required for [purchase] transactions')
-                } else if (req.body.stock_change_type != 'in') {
-                    return UnprocessableEntity('Invalid stock_change_type field. Please use [in]')
-                }
-
-                if ((await conn.query(
-                    'SELECT EXISTS(SELECT 1 FROM suppliers WHERE id = ?) AS supplier_exists',
-                    [req.body.supplier_id]
-                ))[0][0].supplier_exists == 0) {
-                    return NotFound(`Supplier with id ${req.body.supplier_id} does not exists`)
-                }
-
-                break;
-            case 'sale':
-                if (!req.body.customer_id) {
-                    return BadRequest('customer_id is required for [sale] transactions')
-                } else if (req.body.stock_change_type != 'out') {
-                    return UnprocessableEntity('Invalid stock_change_type field. Please use [out]')
-                }
-
-                if ((await conn.query(
-                    'SELECT EXISTS(SELECT 1 FROM customers WHERE id = ?) AS customer_exists',
-                    [req.body.customer_id]
-                ))[0][0].customer_exists == 0) {
-                    return NotFound(`Customer with id ${req.body.customer_id} does not exists`)
-                }
-
-                break;
-            case 'return':
-                if (!(req.body.supplier_id && req.body.customer_id)) {
-                    return BadRequest('supplier_id or customer_id is required for [return] transactions')
-                }
-
-                result = (await conn.query(
-                    `SELECT EXISTS(SELECT 1 FROM suppliers WHERE id = ?) AS supplier_exists,
-                            EXISTS(SELECT 1 FROM customers WHERE id = ?) AS customer_exists`,
-                    [req.body.supplier_id ?? 0, req.body.customer_id ?? 0]
-                ))[0][0]
-                if (result.supplier_exists == 0) {
-                    return NotFound(`Supplier with id ${req.body.supplier_id} does not exist`)
-                }
-                if (result.customer_exists == 0) {
-                    return NotFound(`Customer with id ${req.body.customer_id} does not exist`)
-                }
-
-                break;
-            default:
-                return UnprocessableEntity(`transaction with type [${req.body.type}] is'nt supported, please use either [purchase], [sale], and [return]`)
-        }
-
-        await conn.query(
-            `INSERT INTO transactions (account_id, supplier_id, customer_id, type, total_cost, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)`,
-            [req.jwtDecoded.id, req.body.supplier_id, req.body.customer_id, req.body.type, req.body.total_cost, dateNow]
-        )
-
-        const transaction_id = (await conn.query('SELECT LAST_INSERT_ID() AS transaction_id'))[0][0].transaction_id
-
-        for (const item of req.body.items) {
-            await conn.query(
-                `INSERT INTO transaction_items (transaction_id, product_id, unit_name, unit_price, quantity, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)`,
-                [transaction_id, item.product_id, item.unit_name, item.unit_price, item.quantity, dateNow]
-            )
-            await conn.query(
-                `INSERT INTO stock_logs (transaction_id, product_id, init_stock, change_type, quantity, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)`,
-                [transaction_id, item.product_id, item.stock, req.body.stock_change_type, item.quantity, dateNow]
-            )
-
-            if (req.body.stock_change_type == 'out') {
-                await conn.query(
-                    'UPDATE products SET stock = stock - ? WHERE id = ?',
-                    [item.quantity, item.product_id]
-                )
-
-                if ((item.stock - item.quantity) <= 0) {
-                    fastify.notificationManager.notifyEmptyStock(item.unit_name)
-                } else if ((item.stock - item.quantity) < 10) {
-                    fastify.notificationManager.notifyLowStock(item.unit_name)
-                }
-            } else if (req.body.stock_change_type == 'in') {
-                await conn.query(
-                    'UPDATE products SET stock = stock + ? WHERE id = ?',
-                    [item.quantity, item.product_id]
-                )
-            } else {
-                return UnprocessableEntity('Invalid stock_change_type field. Please use one of them: [in, out]')
+        try {
+            switch (req.body.type) {
+                case 'purchase':
+                    if (!req.body.supplier_id) {
+                        return BadRequest('supplier_id is required for [purchase] transactions')
+                    } else if (req.body.stock_change_type != 'in') {
+                        return UnprocessableEntity('Invalid stock_change_type field. Please use [in]')
+                    }
+    
+                    if ((await conn.query(
+                        'SELECT EXISTS(SELECT 1 FROM suppliers WHERE id = ?) AS supplier_exists',
+                        [req.body.supplier_id]
+                    ))[0][0].supplier_exists == 0) {
+                        return NotFound(`Supplier with id ${req.body.supplier_id} does not exists`)
+                    }
+    
+                    break;
+                case 'sale':
+                    if (!req.body.customer_id) {
+                        return BadRequest('customer_id is required for [sale] transactions')
+                    } else if (req.body.stock_change_type != 'out') {
+                        return UnprocessableEntity('Invalid stock_change_type field. Please use [out]')
+                    }
+    
+                    if ((await conn.query(
+                        'SELECT EXISTS(SELECT 1 FROM customers WHERE id = ?) AS customer_exists',
+                        [req.body.customer_id]
+                    ))[0][0].customer_exists == 0) {
+                        return NotFound(`Customer with id ${req.body.customer_id} does not exists`)
+                    }
+    
+                    break;
+                case 'return':
+                    if (!(req.body.supplier_id && req.body.customer_id)) {
+                        return BadRequest('supplier_id or customer_id is required for [return] transactions')
+                    }
+    
+                    result = (await conn.query(
+                        `SELECT EXISTS(SELECT 1 FROM suppliers WHERE id = ?) AS supplier_exists,
+                                EXISTS(SELECT 1 FROM customers WHERE id = ?) AS customer_exists`,
+                        [req.body.supplier_id ?? 0, req.body.customer_id ?? 0]
+                    ))[0][0]
+                    if (result.supplier_exists == 0) {
+                        return NotFound(`Supplier with id ${req.body.supplier_id} does not exist`)
+                    }
+                    if (result.customer_exists == 0) {
+                        return NotFound(`Customer with id ${req.body.customer_id} does not exist`)
+                    }
+    
+                    break;
+                default:
+                    return UnprocessableEntity(`transaction with type [${req.body.type}] is'nt supported, please use either [purchase], [sale], and [return]`)
             }
-        }
+    
+            await conn.query(
+                `INSERT INTO transactions (account_id, supplier_id, customer_id, type, total_cost, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)`,
+                [req.jwtDecoded.id, req.body.supplier_id, req.body.customer_id, req.body.type, req.body.total_cost, dateNow]
+            )
+    
+            const transaction_id = (await conn.query('SELECT LAST_INSERT_ID() AS transaction_id'))[0][0].transaction_id
+    
+            for (const item of req.body.items) {
+                await conn.query(
+                    `INSERT INTO transaction_items (transaction_id, product_id, unit_name, unit_price, quantity, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?)`,
+                    [transaction_id, item.product_id, item.unit_name, item.unit_price, item.quantity, dateNow]
+                )
+                await conn.query(
+                    `INSERT INTO stock_logs (transaction_id, product_id, init_stock, change_type, quantity, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?)`,
+                    [transaction_id, item.product_id, item.stock, req.body.stock_change_type, item.quantity, dateNow]
+                )
+    
+                if (req.body.stock_change_type == 'out') {
+                    await conn.query(
+                        'UPDATE products SET stock = stock - ? WHERE id = ?',
+                        [item.quantity, item.product_id]
+                    )
+    
+                    if ((item.stock - item.quantity) <= 0) {
+                        fastify.notificationManager.notifyEmptyStock(item.unit_name)
+                    } else if ((item.stock - item.quantity) < 10) {
+                        fastify.notificationManager.notifyLowStock(item.unit_name)
+                    }
+                } else if (req.body.stock_change_type == 'in') {
+                    await conn.query(
+                        'UPDATE products SET stock = stock + ? WHERE id = ?',
+                        [item.quantity, item.product_id]
+                    )
+                } else {
+                    return UnprocessableEntity('Invalid stock_change_type field. Please use one of them: [in, out]')
+                }
+            }
 
-        conn.release()
+            conn.release()
+
+        } catch (error) {
+            conn.release()
+            throw error
+        }
 
         return reply.code(HttpStatusCode.ResetContent).send()
     })

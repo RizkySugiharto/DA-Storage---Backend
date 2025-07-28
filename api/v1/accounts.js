@@ -38,10 +38,12 @@ module.exports = function (fastify, opts, done) {
                     sqlQueryParams
                 ))[0]
             }
-        } catch (error) {
-            throw error
-        } finally {
+
             conn.release()
+            
+        } catch (error) {
+            conn.release()
+            throw error
         }
         
         accounts.forEach((account) => {
@@ -82,19 +84,25 @@ module.exports = function (fastify, opts, done) {
         const avatarPublicId = req.body.avatar_file ? await utils.saveAvatarFile(req.body.avatar_file) : null
         const conn = await fastify.mysql.getConnection()
         
-        await conn.query(
-            `INSERT INTO accounts (avatar_url, name, email, role, password)
-            VALUES (?, ?, ?, ?, ?)`,
-            [avatarPublicId, req.body.name, req.body.email, req.body.role, utils.hashPassword(req.body.password)]
-        )
-        const account = (await conn.query(
-            'SELECT id, avatar_url, name, email, role FROM accounts WHERE id = LAST_INSERT_ID()'
-        ))[0][0]
+        try {
+            await conn.query(
+                `INSERT INTO accounts (avatar_url, name, email, role, password)
+                VALUES (?, ?, ?, ?, ?)`,
+                [avatarPublicId, req.body.name, req.body.email, req.body.role, utils.hashPassword(req.body.password)]
+            )
+            const account = (await conn.query(
+                'SELECT id, avatar_url, name, email, role FROM accounts WHERE id = LAST_INSERT_ID()'
+            ))[0][0]
+    
+            conn.release()
+            account.avatar_url = utils.combineAvatarUrlWithHost(req, avatarPublicId)
 
-        conn.release()
-        account.avatar_url = utils.combineAvatarUrlWithHost(req, avatarPublicId)
-
-        return reply.code(HttpStatusCode.Created).send(account)
+            return reply.code(HttpStatusCode.Created).send(account)
+            
+        } catch (error) {
+            conn.release()
+            throw error
+        }
     })
 
     fastify.put('/:accountId', {
@@ -106,33 +114,42 @@ module.exports = function (fastify, opts, done) {
             'role'
         )
 
-        await fastify.mysql.query(
-            'UPDATE accounts SET email = ?, name = ?, role = ? WHERE id = ?',
-            [req.body.email, req.body.name, req.body.role, req.params.accountId]
-        )
-        
-        if (req.body.password) {
-            await fastify.mysql.query(
-                'UPDATE accounts SET password = ? WHERE id = ?',
-                [utils.hashPassword(req.body.password), req.params.accountId]
+        const conn = await fastify.mysql.getConnection()
+        try {
+            await conn.query(
+                'UPDATE accounts SET email = ?, name = ?, role = ? WHERE id = ?',
+                [req.body.email, req.body.name, req.body.role, req.params.accountId]
             )
-        }
-        
-        if (req.body.avatar_file?.filename) {
-            const avatarPublicId = await utils.saveAvatarFile(req.body.avatar_file)
-            await fastify.mysql.query(
-                'UPDATE accounts SET avatar_url = ? WHERE id = ?',
-                [avatarPublicId, req.params.accountId]
-            )
-        }
+            
+            if (req.body.password) {
+                await conn.query(
+                    'UPDATE accounts SET password = ? WHERE id = ?',
+                    [utils.hashPassword(req.body.password), req.params.accountId]
+                )
+            }
+            
+            if (req.body.avatar_file?.filename) {
+                const avatarPublicId = await utils.saveAvatarFile(req.body.avatar_file)
+                await conn.query(
+                    'UPDATE accounts SET avatar_url = ? WHERE id = ?',
+                    [avatarPublicId, req.params.accountId]
+                )
+            }
+    
+            const account = (await conn.query(
+                'SELECT id, avatar_url, name, email, role FROM accounts WHERE id = ?',
+                [req.params.accountId]
+            ))[0][0]
 
-        const account = (await fastify.mysql.query(
-            'SELECT id, avatar_url, name, email, role FROM accounts WHERE id = ?',
-            [req.params.accountId]
-        ))[0][0]
-        account.avatar_url = utils.combineAvatarUrlWithHost(req, account.avatar_url)
-
-        return reply.code(HttpStatusCode.Ok).send(account)
+            conn.release()
+            account.avatar_url = utils.combineAvatarUrlWithHost(req, account.avatar_url)
+    
+            return reply.code(HttpStatusCode.Ok).send(account)
+            
+        } catch (error) {
+            conn.release()
+            throw error
+        }
     })
 
     fastify.delete('/:accountId', {

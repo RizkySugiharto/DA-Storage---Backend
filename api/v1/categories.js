@@ -58,19 +58,24 @@ module.exports = function (fastify, opts, done) {
         )
 
         const conn = await fastify.mysql.getConnection()
-        
-        await conn.query(
-            `INSERT INTO categories (name, description)
-            VALUES (?, ?)`,
-            [req.body.name, req.body.description]
-        )
-        const category = (await conn.query(
-            'SELECT * FROM categories WHERE id = LAST_INSERT_ID()'
-        ))[0][0]
+        try {
+            await conn.query(
+                `INSERT INTO categories (name, description)
+                VALUES (?, ?)`,
+                [req.body.name, req.body.description]
+            )
+            const category = (await conn.query(
+                'SELECT * FROM categories WHERE id = LAST_INSERT_ID()'
+            ))[0][0]
 
-        conn.release()
-
-        return reply.code(HttpStatusCode.Created).send(category)
+            conn.release()
+    
+            return reply.code(HttpStatusCode.Created).send(category)
+            
+        } catch (error) {
+            conn.release()
+            throw error
+        }    
     })
 
     fastify.put('/:id', {
@@ -81,17 +86,26 @@ module.exports = function (fastify, opts, done) {
             'description'
         )
 
-        await fastify.mysql.query(
-            'UPDATE categories SET name = ?, description = ? WHERE id = ?',
-            [req.body.name, req.body.description, req.params.id]
-        )
-        
-        const category = (await fastify.mysql.query(
-            'SELECT * FROM categories WHERE id = ?',
-            [req.params.id]
-        ))[0][0]
+        const conn = await fastify.mysql.getConnection()
+        try {
+            await conn.query(
+                'UPDATE categories SET name = ?, description = ? WHERE id = ?',
+                [req.body.name, req.body.description, req.params.id]
+            )
+            
+            const category = (await conn.query(
+                'SELECT * FROM categories WHERE id = ?',
+                [req.params.id]
+            ))[0][0]
 
-        return reply.code(HttpStatusCode.Ok).send(category)
+            conn.release()
+    
+            return reply.code(HttpStatusCode.Ok).send(category)
+            
+        } catch (error) {
+            conn.release()
+            throw error
+        }
     })
 
     fastify.delete('/:id', {

@@ -57,19 +57,25 @@ module.exports = function (fastify, opts, done) {
         )
 
         const conn = await fastify.mysql.getConnection()
+        try {
+            await conn.query(
+                `INSERT INTO suppliers (name, email, phone_number)
+                VALUES (?, ?, ?)`,
+                [req.body.name, req.body.email, req.body.phone_number]
+            )
+            const supplier = (await conn.query(
+                'SELECT * FROM suppliers WHERE id = LAST_INSERT_ID()'
+            ))[0][0]
+    
+            conn.release()
+    
+            return reply.code(HttpStatusCode.Created).send(supplier)
+            
+        } catch (error) {
+            conn.release()
+            throw error
+        }
         
-        await conn.query(
-            `INSERT INTO suppliers (name, email, phone_number)
-            VALUES (?, ?, ?)`,
-            [req.body.name, req.body.email, req.body.phone_number]
-        )
-        const supplier = (await conn.query(
-            'SELECT * FROM suppliers WHERE id = LAST_INSERT_ID()'
-        ))[0][0]
-
-        conn.release()
-
-        return reply.code(HttpStatusCode.Created).send(supplier)
     })
 
     fastify.put('/:id', {
@@ -79,17 +85,26 @@ module.exports = function (fastify, opts, done) {
             'name',
         )
 
-        await fastify.mysql.query(
-            'UPDATE suppliers SET name = ?, email = ?, phone_number = ? WHERE id = ?',
-            [req.body.name, req.body.email ?? '', req.body.phone_number ?? '', req.params.id]
-        )
-        
-        const supplier = (await fastify.mysql.query(
-            'SELECT * FROM suppliers WHERE id = ?',
-            [req.params.id]
-        ))[0][0]
+        const conn = await fastify.mysql.getConnection()
+        try {
+            await fastify.mysql.query(
+                'UPDATE suppliers SET name = ?, email = ?, phone_number = ? WHERE id = ?',
+                [req.body.name, req.body.email ?? '', req.body.phone_number ?? '', req.params.id]
+            )
+            
+            const supplier = (await fastify.mysql.query(
+                'SELECT * FROM suppliers WHERE id = ?',
+                [req.params.id]
+            ))[0][0]
 
-        return reply.code(HttpStatusCode.Ok).send(supplier)
+            conn.release()
+    
+            return reply.code(HttpStatusCode.Ok).send(supplier)
+            
+        } catch (error) {
+            conn.release()
+            throw error
+        }
     })
 
     fastify.delete('/:id', {

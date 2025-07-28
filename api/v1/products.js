@@ -9,7 +9,7 @@ async function checkCategoryExists(conn, category_id) {
     ))[0][0].isExists
 
     if (isCategoryExists == 0) {
-        return NotFound(`Category with id ${category_id} does not exist`)
+        throw NotFound(`Category with id ${category_id} does not exist`)
     }
 }
 
@@ -167,31 +167,34 @@ module.exports = function (fastify, opts, done) {
         )
 
         const conn = await fastify.mysql.getConnection()
-        
-        if (error = await checkCategoryExists(conn, req.body.category_id)) {
-            return error
+        try {
+            await checkCategoryExists(conn, req.body.category_id)
+    
+            await conn.query(
+                `INSERT INTO products (name, category_id, price, stock, updated_at)
+                VALUES (?, ?, ?, ?, ?)`,
+                [req.body.name, req.body.category_id, req.body.price, req.body.stock, new Date(Date.now())]
+            )
+            const product = (await conn.query(
+                'SELECT * FROM products WHERE id = LAST_INSERT_ID()'
+            ))[0][0]
+    
+            conn.release()
+    
+            product.price = parseFloat(product.price)
+            product.category = {
+                id: product.category_id,
+                name: product.category_name,
+            }
+            delete product.category_id;
+            delete product.category_name;
+    
+            return reply.code(HttpStatusCode.Created).send(product)
+            
+        } catch (error) {
+            conn.release()
+            throw error
         }
-
-        await conn.query(
-            `INSERT INTO products (name, category_id, price, stock, updated_at)
-            VALUES (?, ?, ?, ?, ?)`,
-            [req.body.name, req.body.category_id, req.body.price, req.body.stock, new Date(Date.now())]
-        )
-        const product = (await conn.query(
-            'SELECT * FROM products WHERE id = LAST_INSERT_ID()'
-        ))[0][0]
-
-        conn.release()
-
-        product.price = parseFloat(product.price)
-        product.category = {
-            id: product.category_id,
-            name: product.category_name,
-        }
-        delete product.category_id;
-        delete product.category_name;
-
-        return reply.code(HttpStatusCode.Created).send(product)
     })
 
     fastify.put('/:id', {
@@ -204,36 +207,49 @@ module.exports = function (fastify, opts, done) {
             'stock',
         )
 
-        if (error = await checkCategoryExists(fastify.mysql, req.body.category_id)) {
-            return error
+        
+        const conn = await fastify.mysql.getConnection()
+        try {
+            await checkCategoryExists(conn, req.body.category_id)
+
+            const preProduct = (await conn.query(
+                'SELECT stock FROM products WHERE id = ?',
+                [req.params.id]
+            ))[0][0]
+
+            await conn.query(
+                'UPDATE products SET name = ?, category_id = ?, price = ?, stock = ?, updated_at = ? WHERE id = ?',
+                [req.body.name, req.body.category_id, req.body.price, req.body.stock, new Date(Date.now()), req.params.id]
+            )
+    
+            const product = (await conn.query(
+                'SELECT * FROM products WHERE id = ?',
+                [req.params.id]
+            ))[0][0]
+
+            conn.release()
+    
+            product.price = parseFloat(product.price)
+            product.category = {
+                id: product.category_id,
+                name: product.category_name,
+            }
+            delete product.category_id;
+            delete product.category_name;
+    
+            const isStockUpdated = parseInt(req.body.stock) != preProduct.stock;
+            if (isStockUpdated && product.stock <= 0) {
+                fastify.notificationManager.notifyEmptyStock(product.name)
+            } else if (isStockUpdated && product.stock < 10) {
+                fastify.notificationManager.notifyLowStock(product.name)
+            }
+    
+            return reply.code(HttpStatusCode.Ok).send(product)
+
+        } catch (error) {
+            conn.release()
+            throw error
         }
-
-        await fastify.mysql.query(
-            'UPDATE products SET name = ?, category_id = ?, price = ?, stock = ?, updated_at = ? WHERE id = ?',
-            [req.body.name, req.body.category_id, req.body.price, req.body.stock, new Date(Date.now()), req.params.id]
-        )
-
-        const product = (await fastify.mysql.query(
-            'SELECT * FROM products WHERE id = ?',
-            [req.params.id]
-        ))[0][0]
-
-        product.price = parseFloat(product.price)
-        product.category = {
-            id: product.category_id,
-            name: product.category_name,
-        }
-        delete product.category_id;
-        delete product.category_name;
-
-        const isStockUpdated = parseInt(req.body.stock) != product.stock;
-        if (isStockUpdated && product.stock <= 0) {
-            fastify.notificationManager.notifyEmptyStock(product.name)
-        } else if (isStockUpdated && product.stock < 10) {
-            fastify.notificationManager.notifyLowStock(product.name)
-        }
-
-        return reply.code(HttpStatusCode.Ok).send(product)
     })
 
     fastify.delete('/:id', {
