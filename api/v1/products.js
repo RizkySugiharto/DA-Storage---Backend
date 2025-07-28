@@ -226,9 +226,10 @@ module.exports = function (fastify, opts, done) {
         delete product.category_id;
         delete product.category_name;
 
-        if (product.stock <= 0) {
+        const isStockUpdated = parseInt(req.body.stock) != product.stock;
+        if (isStockUpdated && product.stock <= 0) {
             fastify.notificationManager.notifyEmptyStock(product.name)
-        } else if (product.stock < 10) {
+        } else if (isStockUpdated && product.stock < 10) {
             fastify.notificationManager.notifyLowStock(product.name)
         }
 
