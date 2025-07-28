@@ -226,7 +226,7 @@ module.exports = function (fastify, opts, done) {
         delete product.category_id;
         delete product.category_name;
 
-        if (product.stock < 10) {
+        if (product.stock <= 0) {
             fastify.notificationManager.notifyEmptyStock(product.name)
         } else if (product.stock < 10) {
             fastify.notificationManager.notifyLowStock(product.name)

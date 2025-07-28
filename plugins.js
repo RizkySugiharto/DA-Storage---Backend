@@ -43,6 +43,9 @@ async function loadPlugins(fastify) {
         }
     })
     fastify.decorate('notificationManager', {
+        initializeFirebase: () => {
+            firebaseAdmin.initializeApp()
+        },
         notifyLowStock: (productName) => {
             firebaseAdmin.messaging().sendEachForMulticast({
                 notification: {

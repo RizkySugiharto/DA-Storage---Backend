@@ -20,6 +20,9 @@ async function main() {
     // Register all plugins
     await plugins.loadPlugins(fastify)
 
+    // Initialize Firebase
+    fastify.notificationManager.initializeFirebase()
+
     // Setup Cloudinary
     cloudinary.config({
         secure: true,
