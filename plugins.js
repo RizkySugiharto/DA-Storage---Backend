@@ -50,7 +50,7 @@ async function loadPlugins(fastify) {
             firebaseAdmin.messaging().sendEachForMulticast({
                 notification: {
                     title: 'Stock Warning',
-                    body: `Product ${productName} has stock less than 10`
+                    body: `Product [ ${productName} ] has stock less than 10`
                 },
                 topic: 'notifications-lowstock',    
             })
@@ -59,7 +59,7 @@ async function loadPlugins(fastify) {
             firebaseAdmin.messaging().sendEachForMulticast({
                 notification: {
                     title: 'Stock Warning',
-                    body: `Product ${productName} has no stock`
+                    body: `Product [ ${productName} ] has no stock`
                 },
                 topic: 'notifications-emptystock',    
             })
