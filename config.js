@@ -1,18 +1,26 @@
 const dotenv = require('dotenv')
-const minimist = require('minimist')
-const toBoolean = require('to-boolean')
+const fs = require('fs');
 const ENV_DIR = './'
 
-function loadConfig() {
-    const localOption = minimist(process.argv.slice(2))['local']
-    const isLocalMode = localOption ? toBoolean(localOption) : false
-
+function loadEnvConfig() {
     dotenv.config({
-        path: ENV_DIR + '.env' + (isLocalMode ? '.local' : ''),
+        path: ENV_DIR + '.env',
         override: false
     })
 }
 
+function loadFirebaseCredentials() {
+    const base64 = process.env.FIREBASE_CREDENTIALS_BASE64
+    const filePath = "/tmp/firebase-key.json"
+
+    if (base64 && !fs.existsSync(filePath)) {
+        const json = Buffer.from(base64, "base64").toString("utf-8")
+        fs.writeFileSync(filePath, json)
+        process.env.GOOGLE_APPLICATION_CREDENTIALS = filePath
+    }
+}
+
 module.exports = {
-    loadConfig
+    loadEnvConfig,
+    loadFirebaseCredentials
 }

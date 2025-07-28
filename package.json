@@ -6,9 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "set NODE_ENV=development&& nodemon app.js",
-    "local": "nodemon app.js --local=true",
-    "local:dev": "set NODE_ENV=development&& nodemon app.js --local=true",
-    "local:prod": "set NODE_ENV=production&& nodemon app.js --local=true",
+    "prod": "set NODE_ENV=production&& nodemon app.js",
     "start": "set NODE_ENV=production&& node app.js"
   },
   "author": "Mr. Ryto",
@@ -28,6 +26,7 @@
     "date-and-time": "^3.4.1",
     "dotenv": "^16.4.5",
     "fastify": "^4.28.1",
+    "firebase-admin": "^13.4.0",
     "http-errors": "^2.0.0",
     "minimist": "^1.2.8",
     "node-schedule": "^2.1.1",

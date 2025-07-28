@@ -8,8 +8,9 @@ const schedule = require('node-schedule')
 const cloudinary = require('cloudinary').v2;
 
 async function main() {
-    // Load environtment configuration
-    config.loadConfig()
+    // Load configurations
+    config.loadEnvConfig()
+    config.loadFirebaseCredentials()
     
     // Initialize the app
     const fastify = require('fastify')({

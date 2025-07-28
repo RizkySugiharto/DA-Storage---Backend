@@ -202,6 +202,12 @@ module.exports = function (fastify, opts, done) {
                     'UPDATE products SET stock = stock + ? WHERE id = ?',
                     [item.quantity, item.product_id]
                 )
+
+                if ((item.stock - item.quantity) <= 0) {
+                    fastify.notificationManager.notifyEmptyStock(item.unit_name)
+                } else if ((item.stock - item.quantity) < 10) {
+                    fastify.notificationManager.notifyLowStock(item.unit_name)
+                }
             } else {
                 return UnprocessableEntity('Invalid stock_change_type field. Please use one of them: [in, out]')
             }

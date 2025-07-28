@@ -212,7 +212,7 @@ module.exports = function (fastify, opts, done) {
             'UPDATE products SET name = ?, category_id = ?, price = ?, stock = ?, updated_at = ? WHERE id = ?',
             [req.body.name, req.body.category_id, req.body.price, req.body.stock, new Date(Date.now()), req.params.id]
         )
-        
+
         const product = (await fastify.mysql.query(
             'SELECT * FROM products WHERE id = ?',
             [req.params.id]
@@ -225,6 +225,12 @@ module.exports = function (fastify, opts, done) {
         }
         delete product.category_id;
         delete product.category_name;
+
+        if (product.stock < 10) {
+            fastify.notificationManager.notifyEmptyStock(product.name)
+        } else if (product.stock < 10) {
+            fastify.notificationManager.notifyLowStock(product.name)
+        }
 
         return reply.code(HttpStatusCode.Ok).send(product)
     })

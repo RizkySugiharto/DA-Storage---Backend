@@ -78,19 +78,19 @@ module.exports = function (fastify, opts, done) {
     }, async (req, reply) => {
         utils.checkReqBodyAvailability(req, 'email', 'name')
 
-        await fastify.mysql.query(
-            'UPDATE accounts SET email = ?, name = ? WHERE id = ?',
-            [req.body.email, req.body.name, req.jwtDecoded.id]
-        )
-        
+        let fieldsName = ['email = ?', 'name = ?'];
+        let fieldsValue = [req.body.email, req.body.name];
+
         if (req.body.avatar_file && req.body.avatar_file.filename) {
             const avatarFilename = await utils.saveAvatarFile(req.body.avatar_file)
-            await fastify.mysql.query(
-                'UPDATE accounts SET avatar_url = ? WHERE id = ?',
-                [avatarFilename, req.jwtDecoded.id]
-            )
+            fieldsName.push('avatar_url = ?')
+            fieldsValue.push(avatarFilename)
         }
 
+        await fastify.mysql.query(
+            `UPDATE accounts SET ${fieldsName.join(', ')} WHERE id = ?`,
+            [...fieldsValue, req.jwtDecoded.id]
+        )
 
         const result = (await fastify.mysql.query(
             'SELECT id, avatar_url, email, name, role FROM accounts WHERE id = ?',

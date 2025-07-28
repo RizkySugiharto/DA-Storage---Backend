@@ -1,5 +1,6 @@
 const { Unauthorized, Forbidden } = require('http-errors')
 const utils = require('./utils')
+const firebaseAdmin = require('firebase-admin');
 
 async function loadPlugins(fastify) {
     await fastify.register(require('@fastify/rate-limit'), {
@@ -39,6 +40,26 @@ async function loadPlugins(fastify) {
     fastify.decorate('onlyAdministrator', async (req, reply) => {
         if (!utils.isAdministrator(req.jwtDecoded.role)) {
             throw Forbidden("You don't have permissions to access the endpoint")
+        }
+    })
+    fastify.decorate('notificationManager', {
+        notifyLowStock: (productName) => {
+            firebaseAdmin.messaging().sendEachForMulticast({
+                notification: {
+                    title: 'Stock Warning',
+                    body: `Product ${productName} has stock less than 10`
+                },
+                topic: 'notifications-lowstock',    
+            })
+        },
+        notifyEmptyStock: (productName) => {
+            firebaseAdmin.messaging().sendEachForMulticast({
+                notification: {
+                    title: 'Stock Warning',
+                    body: `Product ${productName} has no stock`
+                },
+                topic: 'notifications-emptystock',    
+            })
         }
     })
 

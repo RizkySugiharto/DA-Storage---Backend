@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS accounts (
     email VARCHAR(255) NOT NULL UNIQUE,
     password TEXT NOT NULL,
     role ENUM('admin', 'staff') DEFAULT 'staff',
+    UNIQUE (email),
     INDEX idx_accounts_name (name)
 );
 
